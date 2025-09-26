@@ -10,6 +10,9 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import '@mdi/font/css/materialdesignicons.css'
 
+// Store de autenticación
+import { useAuthStore } from '@/stores/auth'
+
 // Configuración de Vuetify
 const vuetify = createVuetify({
   components,
@@ -43,9 +46,15 @@ const vuetify = createVuetify({
 })
 
 const app = createApp(App)
+const pinia = createPinia()
 
-app.use(createPinia())
+app.use(pinia)
 app.use(router)
 app.use(vuetify)
 
+// Inicializar store de autenticación después de montar Pinia
 app.mount('#app')
+
+// Restaurar sesión al cargar la aplicación
+const authStore = useAuthStore()
+authStore.restoreSession()

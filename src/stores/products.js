@@ -66,6 +66,30 @@ export const useProductsStore = defineStore('products', () => {
     searchQuery.value = ''
   }
 
+  // Gestión de stock
+  function reduceStock(productId, quantity = 1) {
+    const product = products.value.find((p) => p.id === productId)
+    if (product && product.stock >= quantity) {
+      product.stock -= quantity
+      return true
+    }
+    return false
+  }
+
+  function increaseStock(productId, quantity = 1) {
+    const product = products.value.find((p) => p.id === productId)
+    if (product) {
+      product.stock += quantity
+      return true
+    }
+    return false
+  }
+
+  function getAvailableStock(productId) {
+    const product = products.value.find((p) => p.id === productId)
+    return product ? product.stock : 0
+  }
+
   return {
     products,
     searchQuery,
@@ -73,5 +97,8 @@ export const useProductsStore = defineStore('products', () => {
     getProductById,
     setSearchQuery,
     clearSearch,
+    reduceStock,
+    increaseStock,
+    getAvailableStock,
   }
 })

@@ -1,319 +1,248 @@
 <template>
-  <div class="registro-card">
-    <h2 class="titulo">🏪 Registro Rápido de Cliente</h2>
-    
-    <div class="form-group">
-      <label for="nombreCliente" class="label">
-        Nombre del Cliente:
-      </label>
-      <input
-        id="nombreCliente"
-        v-model="nombreCliente"
-        type="text"
-        placeholder="Ingrese el nombre del cliente..."
-        :class="{ 
-          'input-nombre': true,
-          'input-valid': isNameValid && nombreCliente.length > 0,
-          'input-invalid': nombreCliente.length > 0 && !isNameValid,
-          'input-neutral': nombreCliente.length === 0
-        }"
-        @keyup.enter="registrarCliente"
-      />
-      
-      <!-- Mensaje de error cuando el nombre es muy corto -->
-      <div v-if="nombreCliente.length > 0 && !isNameValid" class="error-message">
-        ⚠️ El nombre debe tener al menos 3 caracteres
-      </div>
-      
-      <!-- Mensaje de éxito cuando el nombre es válido -->
-      <div v-else-if="isNameValid && nombreCliente.length > 0" class="success-message">
-        ✅ Nombre válido
-      </div>
-    </div>
+  <v-form ref="form" v-model="isFormValid" @submit.prevent="handleSubmit">
+    <v-row>
+      <!-- Campo Nombre -->
+      <v-col cols="12" md="8">
+        <v-text-field
+          v-model="customerName"
+          :rules="nameRules"
+          label="Nombre del Cliente"
+          placeholder="Ingresa el nombre del cliente..."
+          prepend-inner-icon="mdi-account"
+          variant="outlined"
+          :disabled="isSubmitting"
+          counter="50"
+          maxlength="50"
+          @input="clearMessages"
+        ></v-text-field>
+      </v-col>
 
-    <!-- Botón con estado dinámico -->
-    <button 
-      @click="registrarCliente"
-      :disabled="!isNameValid"
-      :class="{
-        'btn-registrar': true,
-        'btn-enabled': isNameValid,
-        'btn-disabled': !isNameValid
-      }"
-    >
-      {{ isNameValid ? 'Registrar Cliente' : 'Nombre debe tener 3+ caracteres' }}
-    </button>
+      <!-- Botón Registrar -->
+      <v-col cols="12" md="4" class="d-flex align-center">
+        <v-btn
+          type="submit"
+          :disabled="!isFormValid || isSubmitting"
+          :loading="isSubmitting"
+          color="primary"
+          variant="elevated"
+          size="large"
+          block
+        >
+          <v-icon left>mdi-account-plus</v-icon>
+          {{ isSubmitting ? 'Registrando...' : 'Registrar Cliente' }}
+        </v-btn>
+      </v-col>
+    </v-row>
 
-    <!-- Mensaje de confirmación después del registro -->
-    <div v-if="mostrarConfirmacion" class="confirmacion">
-      <div class="mensaje-bienvenida">
-        <h3>🎉 ¡Bienvenido, {{ clienteRegistrado }}!</h3>
-        <p>Tu registro ha sido completado exitosamente.</p>
-        <small>Cliente guardado en el sistema</small>
-      </div>
-    </div>
+    <!-- Mensajes de estado -->
+    <v-row v-if="showMessage">
+      <v-col cols="12">
+        <v-alert :type="messageType" variant="tonal" closable @click:close="clearMessages">
+          <template v-slot:prepend>
+            <v-icon>
+              {{ messageType === 'success' ? 'mdi-check-circle' : 'mdi-alert-circle' }}
+            </v-icon>
+          </template>
+          {{ message }}
+        </v-alert>
+      </v-col>
+    </v-row>
 
-    <!-- Lista de clientes registrados -->
-    <div v-if="clientesRegistrados.length > 0" class="lista-clientes">
-      <h4>Clientes registrados hoy:</h4>
-      <ul>
-        <li v-for="(cliente, index) in clientesRegistrados" :key="index">
-          {{ cliente.nombre }} - {{ cliente.hora }}
-        </li>
-      </ul>
-    </div>
-  </div>
+    <!-- Información adicional -->
+    <v-row>
+      <v-col cols="12">
+        <v-card variant="outlined" class="mt-4">
+          <v-card-text class="pa-4">
+            <div class="d-flex align-center mb-2">
+              <v-icon class="me-2" color="info">mdi-information</v-icon>
+              <span class="font-weight-bold text-body-1">Información sobre el registro</span>
+            </div>
+            <v-list density="compact">
+              <v-list-item>
+                <v-list-item-title class="text-body-2">
+                  • El nombre debe tener al menos 3 caracteres
+                </v-list-item-title>
+              </v-list-item>
+              <v-list-item>
+                <v-list-item-title class="text-body-2">
+                  • Se guardará la fecha y hora de registro automáticamente
+                </v-list-item-title>
+              </v-list-item>
+              <v-list-item>
+                <v-list-item-title class="text-body-2">
+                  • Los clientes aparecerán en la lista de abajo inmediatamente
+                </v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- Ejemplos de nombres para testing -->
+    <v-row v-if="!isSubmitting">
+      <v-col cols="12">
+        <v-card variant="outlined" color="grey-lighten-5">
+          <v-card-text class="pa-4">
+            <div class="d-flex align-center mb-2">
+              <v-icon class="me-2" color="orange">mdi-lightning-bolt</v-icon>
+              <span class="font-weight-bold text-body-2">Registro rápido para testing:</span>
+            </div>
+            <div class="d-flex flex-wrap ga-2">
+              <v-chip
+                v-for="exampleName in exampleNames"
+                :key="exampleName"
+                @click="fillExampleName(exampleName)"
+                color="primary"
+                variant="outlined"
+                size="small"
+                class="cursor-pointer"
+              >
+                {{ exampleName }}
+              </v-chip>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+  </v-form>
 </template>
 
-<script>
-export default {
-  name: 'RegistroCliente',
-  data() {
-    return {
-      nombreCliente: '',
-      mostrarConfirmacion: false,
-      clienteRegistrado: '',
-      clientesRegistrados: []
-    }
+<script setup>
+import { ref, reactive, computed } from 'vue'
+import { useCustomersStore } from '@/stores/customers'
+
+// Store
+const customersStore = useCustomersStore()
+
+// Referencias del formulario
+const form = ref(null)
+const isFormValid = ref(false)
+const isSubmitting = ref(false)
+
+// Estado del formulario
+const customerName = ref('')
+
+// Estado de mensajes
+const showMessage = ref(false)
+const message = ref('')
+const messageType = ref('success')
+
+// Ejemplos para testing
+const exampleNames = [
+  'Juan Pérez',
+  'María García',
+  'Carlos López',
+  'Ana Martínez',
+  'Luis Rodríguez',
+  'Carmen Sánchez',
+]
+
+// Reglas de validación
+const nameRules = computed(() => [
+  (v) => !!v || 'El nombre es requerido',
+  (v) => (v && v.length >= 3) || 'El nombre debe tener al menos 3 caracteres',
+  (v) => (v && v.length <= 50) || 'El nombre no puede exceder 50 caracteres',
+  (v) => {
+    const pattern = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/
+    return pattern.test(v) || 'El nombre solo debe contener letras y espacios'
   },
-  computed: {
-    // Computed para validar si el nombre tiene 3+ caracteres
-    isNameValid() {
-      return this.nombreCliente.trim().length >= 3;
-    }
-  },
-  methods: {
-    registrarCliente() {
-      if (!this.isNameValid) {
-        return; // No hacer nada si el nombre no es válido
-      }
+])
 
-      // Simular guardado en "base de datos"
-      const cliente = {
-        nombre: this.nombreCliente.trim(),
-        hora: new Date().toLocaleTimeString(),
-        fecha: new Date().toLocaleDateString()
-      };
+// Eventos
+const emit = defineEmits(['customer-registered'])
 
-      console.log('🔄 Guardando cliente en base de datos:', cliente);
-      
-      // Agregar a la lista local
-      this.clientesRegistrados.push(cliente);
+// Métodos
+async function handleSubmit() {
+  // Validar formulario
+  const { valid } = await form.value.validate()
 
-      // Guardar el nombre para el mensaje de bienvenida
-      this.clienteRegistrado = this.nombreCliente.trim();
-      
-      // Mostrar confirmación
-      this.mostrarConfirmacion = true;
-
-      // Limpiar el campo después de un momento
-      setTimeout(() => {
-        this.nombreCliente = '';
-        this.mostrarConfirmacion = false;
-        this.clienteRegistrado = '';
-      }, 4000);
-
-      console.log('✅ Cliente registrado exitosamente');
-      console.log('📊 Total de clientes hoy:', this.clientesRegistrados.length);
-    }
+  if (!valid) {
+    showErrorMessage('Por favor, corrige los errores en el formulario')
+    return
   }
+
+  isSubmitting.value = true
+
+  try {
+    // Simular delay de guardado
+    await new Promise((resolve) => setTimeout(resolve, 800))
+
+    // Validar que el nombre no esté vacío después del trim
+    const trimmedName = customerName.value.trim()
+    if (!trimmedName) {
+      throw new Error('El nombre no puede estar vacío')
+    }
+
+    // Crear datos del cliente
+    const customerData = {
+      nombre: trimmedName,
+      timestamp: Date.now(),
+    }
+
+    // Agregar cliente al store (con persistencia)
+    const result = customersStore.addCustomer(customerData)
+
+    if (!result.success) {
+      throw new Error(result.error || 'Error al registrar el cliente')
+    }
+
+    // Emitir evento para compatibilidad con Customers.vue
+    emit('customer-registered', result.customer)
+
+    // Mostrar mensaje de éxito
+    showSuccessMessage(`Cliente "${trimmedName}" registrado exitosamente`)
+
+    // Limpiar formulario
+    customerName.value = ''
+    form.value.reset()
+
+    console.log('Cliente registrado con persistencia:', result.customer)
+  } catch (error) {
+    console.error('Error al registrar cliente:', error)
+    showErrorMessage(error.message || 'Error al registrar el cliente')
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+function fillExampleName(name) {
+  customerName.value = name
+  clearMessages()
+}
+
+function showSuccessMessage(msg) {
+  message.value = msg
+  messageType.value = 'success'
+  showMessage.value = true
+
+  // Auto-ocultar después de 5 segundos
+  setTimeout(() => {
+    showMessage.value = false
+  }, 5000)
+}
+
+function showErrorMessage(msg) {
+  message.value = msg
+  messageType.value = 'error'
+  showMessage.value = true
+}
+
+function clearMessages() {
+  showMessage.value = false
+  message.value = ''
 }
 </script>
 
 <style scoped>
-.registro-card {
-  background: white;
-  border-radius: 15px;
-  padding: 30px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  max-width: 450px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.titulo {
-  text-align: center;
-  color: #333;
-  margin-bottom: 25px;
-  font-size: 1.5rem;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 600;
-  color: #555;
-}
-
-/* ESTILOS DINÁMICOS PARA EL INPUT SEGÚN VALIDEZ */
-.input-nombre {
-  width: 100%;
-  padding: 12px 15px;
-  border: 2px solid #e1e5e9;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: all 0.3s ease;
-  box-sizing: border-box;
-}
-
-/* Input neutro (sin contenido) */
-.input-neutral {
-  border-color: #e1e5e9;
-  background-color: white;
-}
-
-/* Input válido (3+ caracteres) */
-.input-valid {
-  border-color: #28a745 !important;
-  background-color: #f8fff9 !important;
-  box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2);
-}
-
-/* Input inválido (< 3 caracteres) */
-.input-invalid {
-  border-color: #dc3545 !important;
-  background-color: #fff5f5 !important;
-  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2);
-}
-
-.input-nombre:focus {
-  outline: none;
-}
-
-/* MENSAJES DE VALIDACIÓN */
-.error-message {
-  color: #dc3545;
-  font-size: 14px;
-  background: #f8d7da;
-  padding: 8px 12px;
-  border-radius: 4px;
-  border: 1px solid #f5c6cb;
-  margin-top: 8px;
-  animation: slideIn 0.3s ease;
-}
-
-.success-message {
-  color: #155724;
-  font-size: 14px;
-  background: #d4edda;
-  padding: 8px 12px;
-  border-radius: 4px;
-  border: 1px solid #c3e6cb;
-  margin-top: 8px;
-  animation: slideIn 0.3s ease;
-}
-
-/* BOTÓN CON ESTADOS DINÁMICOS */
-.btn-registrar {
-  width: 100%;
-  padding: 12px;
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 600;
+.cursor-pointer {
   cursor: pointer;
-  transition: all 0.3s ease;
 }
 
-/* Botón habilitado */
-.btn-enabled {
-  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-  color: white;
-}
-
-.btn-enabled:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
-}
-
-/* Botón deshabilitado */
-.btn-disabled {
-  background: #6c757d;
-  color: #fff;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.confirmacion {
-  margin-top: 20px;
-  animation: slideIn 0.5s ease;
-}
-
-.mensaje-bienvenida {
-  background: #d4edda;
-  border: 1px solid #c3e6cb;
-  border-radius: 8px;
-  padding: 20px;
-  text-align: center;
-}
-
-.mensaje-bienvenida h3 {
-  margin: 0 0 10px 0;
-  color: #155724;
-  font-size: 1.3em;
-}
-
-.mensaje-bienvenida p {
-  margin: 10px 0;
-  color: #155724;
-  font-weight: 500;
-}
-
-.mensaje-bienvenida small {
-  color: #6c757d;
-}
-
-.lista-clientes {
-  margin-top: 25px;
-  padding-top: 20px;
-  border-top: 1px solid #e1e5e9;
-}
-
-.lista-clientes h4 {
-  color: #333;
-  margin-bottom: 10px;
-}
-
-.lista-clientes ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.lista-clientes li {
-  padding: 8px 12px;
-  background: #f8f9fa;
-  margin-bottom: 5px;
-  border-radius: 5px;
-  font-size: 14px;
-  color: #555;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Responsive */
-@media (max-width: 480px) {
-  .registro-card {
-    padding: 20px;
-    width: 95%;
-  }
-  
-  .titulo {
-    font-size: 1.3rem;
+/* Responsive mejoras */
+@media (max-width: 600px) {
+  .v-btn {
+    margin-top: 8px;
   }
 }
 </style>

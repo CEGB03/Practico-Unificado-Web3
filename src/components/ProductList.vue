@@ -32,28 +32,51 @@
           :class="{ 'product-out-of-stock': product.stock === 0 }"
           elevation="2"
           height="100%"
+          hover
+          class="cursor-pointer"
+          @click="goToProductDetail(product.id)"
         >
           <v-card-title class="d-flex justify-space-between align-start pa-4">
             <span class="text-h6">{{ product.nombre }}</span>
-            <v-chip v-if="product.stock === 0" color="error" size="small" variant="flat">
-              Sin Stock
-            </v-chip>
-            <v-chip v-else-if="product.stock <= 3" color="warning" size="small" variant="flat">
-              Poco Stock ({{ product.stock }})
-            </v-chip>
+            <div>
+              <v-chip v-if="product.stock === 0" color="error" size="small" variant="flat">
+                Sin Stock
+              </v-chip>
+              <v-chip v-else-if="product.stock <= 3" color="warning" size="small" variant="flat">
+                Poco Stock ({{ product.stock }})
+              </v-chip>
+              <v-chip v-else color="success" size="small" variant="flat">
+                Stock: {{ product.stock }}
+              </v-chip>
+            </div>
           </v-card-title>
 
           <v-card-text>
             <p class="text-body-2 mb-3">{{ product.descripcion }}</p>
 
-            <!-- Indicador de stock visual -->
-            <v-progress-linear
-              :model-value="Math.min((product.stock / 10) * 100, 100)"
-              :color="product.stock === 0 ? 'error' : product.stock <= 3 ? 'warning' : 'success'"
-              height="6"
-              rounded
-              class="mb-3"
-            ></v-progress-linear>
+            <!-- Información de stock detallada -->
+            <div class="mb-3">
+              <div class="d-flex justify-space-between align-center mb-1">
+                <span class="text-caption text-grey">Disponibilidad:</span>
+                <span class="text-caption font-weight-medium">
+                  {{ product.stock }} {{ product.stock === 1 ? 'unidad' : 'unidades' }}
+                </span>
+              </div>
+
+              <!-- Indicador de stock visual -->
+              <v-progress-linear
+                :model-value="Math.min((product.stock / 10) * 100, 100)"
+                :color="product.stock === 0 ? 'error' : product.stock <= 3 ? 'warning' : 'success'"
+                height="8"
+                rounded
+              ></v-progress-linear>
+
+              <div class="text-caption text-grey mt-1">
+                <template v-if="product.stock === 0"> Producto agotado </template>
+                <template v-else-if="product.stock <= 3"> ¡Últimas unidades! </template>
+                <template v-else> Producto disponible </template>
+              </div>
+            </div>
           </v-card-text>
 
           <v-card-actions class="px-4 pb-4">
@@ -62,7 +85,7 @@
               ${{ product.precio.toFixed(2) }}
             </div>
             <v-btn
-              @click="handleAddToCart(product.id)"
+              @click.stop="handleAddToCart(product.id)"
               :disabled="product.stock === 0"
               :color="product.stock === 0 ? 'grey' : 'primary'"
               :variant="product.stock === 0 ? 'text' : 'elevated'"
@@ -81,10 +104,12 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useProductsStore } from '@/stores/products'
 import { useCartStore } from '@/stores/cart'
 
-// Stores
+// Router y Stores
+const router = useRouter()
 const productsStore = useProductsStore()
 const cartStore = useCartStore()
 
@@ -97,7 +122,7 @@ const searchQuery = computed({
 const filteredProducts = computed(() => productsStore.filteredProducts)
 
 // Eventos
-const emit = defineEmits(['product-added'])
+const emit = defineEmits(['product-added', 'product-error'])
 
 // Methods
 function handleSearch(event) {
@@ -109,14 +134,30 @@ function clearSearch() {
 }
 
 function handleAddToCart(productId) {
-  cartStore.addToCart(productId)
-  emit('product-added', productId)
-
-  // Feedback visual opcional
+  const success = cartStore.addToCart(productId)
   const product = productsStore.products.find((p) => p.id === productId)
-  if (product) {
-    console.log(`Producto "${product.nombre}" agregado al carrito`)
+
+  if (success) {
+    emit('product-added', productId)
+
+    if (product) {
+      console.log(`Producto "${product.nombre}" agregado al carrito`)
+    }
+  } else {
+    // Emitir evento de error cuando no se puede agregar
+    if (product) {
+      emit('product-error', {
+        productId,
+        productName: product.nombre,
+        message: `No hay stock disponible para "${product.nombre}"`,
+      })
+      console.warn(`No se puede agregar "${product.nombre}" - Sin stock disponible`)
+    }
   }
+}
+
+function goToProductDetail(productId) {
+  router.push(`/productos/${productId}`)
 }
 </script>
 
@@ -128,5 +169,9 @@ function handleAddToCart(productId) {
 
 .product-out-of-stock .v-card {
   filter: grayscale(0.3);
+}
+
+.cursor-pointer {
+  cursor: pointer;
 }
 </style>

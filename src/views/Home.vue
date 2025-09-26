@@ -1,165 +1,195 @@
 <template>
-    <div class="home">
-        <div class="hero-section">
-        <h1>🛒 Bienvenido a Tienda Vue</h1>
-        <p>Tu tienda online de tecnología</p>
-        
-        <div class="hero-actions">
-            <router-link to="/productos" class="btn btn-primary btn-large">
-            Ver Productos
-            </router-link>
-            <router-link to="/clientes" class="btn btn-secondary btn-large">
-            Registrar Cliente
-            </router-link>
-        </div>
-        </div>
+  <div class="home-page">
+    <!-- Hero Section -->
+    <v-card class="hero-section mb-8" color="primary" variant="flat">
+      <v-card-text class="text-center pa-8 text-white">
+        <v-icon size="80" class="mb-4">mdi-shopping</v-icon>
+        <h1 class="text-h3 font-weight-bold mb-4">¡Bienvenido a Tienda Vue!</h1>
+        <p class="text-h6 mb-6">La mejor experiencia de compra online con Vue 3 y Vuetify</p>
+        <v-btn to="/productos" size="large" color="white" variant="elevated" class="text-primary">
+          <v-icon left>mdi-shopping-outline</v-icon>
+          Explorar Productos
+        </v-btn>
+      </v-card-text>
+    </v-card>
 
-        <div class="features">
-        <div class="feature-card">
-            <h3>🛍️ Productos</h3>
-            <p>Explora nuestro catálogo de productos tecnológicos</p>
-            <router-link to="/productos" class="btn btn-outline">Ver Catálogo</router-link>
-        </div>
-        
-        <div class="feature-card">
-            <h3>🛒 Carrito</h3>
-            <p>Agrega productos y gestiona tu carrito de compras</p>
-        </div>
-        
-        <div class="feature-card">
-            <h3>👥 Clientes</h3>
-            <p>Registra nuevos clientes de forma rápida y sencilla</p>
-            <router-link to="/clientes" class="btn btn-outline">Registrar</router-link>
-        </div>
-        </div>
-    </div>
+    <!-- Stats Cards -->
+    <v-row class="mb-8">
+      <v-col cols="12" sm="6" md="3">
+        <v-card class="text-center" elevation="2">
+          <v-card-text class="pa-6">
+            <v-icon size="48" color="primary" class="mb-3">mdi-package-variant</v-icon>
+            <div class="text-h4 font-weight-bold text-primary">
+              {{ productsStore.products.length }}
+            </div>
+            <div class="text-body-1">Productos Disponibles</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <v-col cols="12" sm="6" md="3">
+        <v-card class="text-center" elevation="2">
+          <v-card-text class="pa-6">
+            <v-icon size="48" color="success" class="mb-3">mdi-cart</v-icon>
+            <div class="text-h4 font-weight-bold text-success">{{ cartStore.totalItems }}</div>
+            <div class="text-body-1">Artículos en Carrito</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <v-col cols="12" sm="6" md="3">
+        <v-card class="text-center" elevation="2">
+          <v-card-text class="pa-6">
+            <v-icon size="48" color="warning" class="mb-3">mdi-currency-usd</v-icon>
+            <div class="text-h4 font-weight-bold text-warning">
+              ${{ cartStore.totalAmount.toFixed(2) }}
+            </div>
+            <div class="text-body-1">Total Carrito</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <v-col cols="12" sm="6" md="3">
+        <v-card class="text-center" elevation="2">
+          <v-card-text class="pa-6">
+            <v-icon size="48" color="info" class="mb-3">mdi-account</v-icon>
+            <div class="text-h4 font-weight-bold text-info">1</div>
+            <div class="text-body-1">Usuario Conectado</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- Quick Actions -->
+    <v-row>
+      <v-col cols="12" md="6">
+        <v-card elevation="2" class="h-100">
+          <v-card-title class="d-flex align-center">
+            <v-icon class="me-2" color="primary">mdi-lightning-bolt</v-icon>
+            Acciones Rápidas
+          </v-card-title>
+          <v-card-text>
+            <v-list>
+              <v-list-item to="/productos" prepend-icon="mdi-shopping-outline">
+                <v-list-item-title>Ver Todos los Productos</v-list-item-title>
+                <v-list-item-subtitle>Explora nuestro catálogo completo</v-list-item-subtitle>
+              </v-list-item>
+
+              <v-list-item to="/clientes" prepend-icon="mdi-account-group">
+                <v-list-item-title>Gestionar Clientes</v-list-item-title>
+                <v-list-item-subtitle>Administra la información de clientes</v-list-item-subtitle>
+              </v-list-item>
+
+              <v-list-item
+                @click="clearCart"
+                prepend-icon="mdi-cart-remove"
+                :disabled="cartStore.isEmpty"
+              >
+                <v-list-item-title>Limpiar Carrito</v-list-item-title>
+                <v-list-item-subtitle>Vacía el carrito de compras</v-list-item-subtitle>
+              </v-list-item>
+            </v-list>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <v-col cols="12" md="6">
+        <v-card elevation="2" class="h-100">
+          <v-card-title class="d-flex align-center">
+            <v-icon class="me-2" color="success">mdi-information</v-icon>
+            Información del Sistema
+          </v-card-title>
+          <v-card-text>
+            <v-list>
+              <v-list-item>
+                <v-list-item-title>Usuario:</v-list-item-title>
+                <v-list-item-subtitle>{{
+                  authStore.user?.name || authStore.userEmail
+                }}</v-list-item-subtitle>
+              </v-list-item>
+
+              <v-list-item>
+                <v-list-item-title>Sesión iniciada:</v-list-item-title>
+                <v-list-item-subtitle>{{
+                  formatDate(authStore.user?.loginTime)
+                }}</v-list-item-subtitle>
+              </v-list-item>
+
+              <v-list-item>
+                <v-list-item-title>Framework:</v-list-item-title>
+                <v-list-item-subtitle>Vue 3 + Vuetify 3 + Pinia</v-list-item-subtitle>
+              </v-list-item>
+
+              <v-list-item>
+                <v-list-item-title>Estado:</v-list-item-title>
+                <v-list-item-subtitle>
+                  <v-chip color="success" size="small" variant="flat">
+                    <v-icon left size="small">mdi-check-circle</v-icon>
+                    Sistema Operativo
+                  </v-chip>
+                </v-list-item-subtitle>
+              </v-list-item>
+            </v-list>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+  </div>
 </template>
 
 <script setup>
-// No necesita lógica adicional por ahora
+import { useAuthStore } from '@/stores/auth'
+import { useCartStore } from '@/stores/cart'
+import { useProductsStore } from '@/stores/products'
+
+// Stores
+const authStore = useAuthStore()
+const cartStore = useCartStore()
+const productsStore = useProductsStore()
+
+// Methods
+function clearCart() {
+  if (confirm('¿Estás seguro de que quieres vaciar el carrito?')) {
+    cartStore.clearCart()
+  }
+}
+
+function formatDate(dateString) {
+  if (!dateString) return 'No disponible'
+
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch (error) {
+    return 'Fecha inválida'
+  }
+}
 </script>
 
 <style scoped>
-.home {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
+.home-page {
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .hero-section {
-    text-align: center;
-    padding: 60px 0;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 12px;
-    margin-bottom: 40px;
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%) !important;
 }
 
-.hero-section h1 {
-    font-size: 3rem;
-    margin-bottom: 16px;
-}
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .hero-section .text-h3 {
+    font-size: 2rem !important;
+  }
 
-.hero-section p {
-    font-size: 1.2rem;
-    margin-bottom: 30px;
-    opacity: 0.9;
-}
-
-.hero-actions {
-    display: flex;
-    gap: 20px;
-    justify-content: center;
-    flex-wrap: wrap;
-}
-
-.btn {
-    padding: 12px 24px;
-    border-radius: 6px;
-    text-decoration: none;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    border: 2px solid transparent;
-}
-
-.btn-large {
-    padding: 16px 32px;
-    font-size: 1.1rem;
-}
-
-.btn-primary {
-    background: #28a745;
-    color: white;
-}
-
-.btn-primary:hover {
-    background: #218838;
-    transform: translateY(-2px);
-}
-
-.btn-secondary {
-    background: transparent;
-    color: white;
-    border-color: white;
-}
-
-.btn-secondary:hover {
-    background: white;
-    color: #667eea;
-}
-
-.btn-outline {
-    background: transparent;
-    color: #667eea;
-    border-color: #667eea;
-}
-
-.btn-outline:hover {
-    background: #667eea;
-    color: white;
-}
-
-.features {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 30px;
-    margin-top: 40px;
-}
-
-.feature-card {
-    background: white;
-    padding: 30px;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    text-align: center;
-    border: 1px solid #e9ecef;
-}
-
-.feature-card h3 {
-    color: #2c3e50;
-    margin-bottom: 15px;
-    font-size: 1.5rem;
-}
-
-.feature-card p {
-    color: #6c757d;
-    margin-bottom: 20px;
-    line-height: 1.6;
-}
-
-@media (max-width: 768px) {
-    .hero-section h1 {
-        font-size: 2rem;
-    }
-    
-    .hero-actions {
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .btn-large {
-        width: 100%;
-        max-width: 300px;
-    }
+  .hero-section .text-h6 {
+    font-size: 1.1rem !important;
+  }
 }
 </style>
