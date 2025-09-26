@@ -1,193 +1,132 @@
 <template>
-    <div>
-        <!-- Input de búsqueda -->
-        <input 
-        v-model="searchQuery" 
-        placeholder="Buscar productos..."
-        class="search-box"
-        />
-    
-        <!-- Lista de productos -->
-        <div v-if="filteredProducts.length > 0" class="product-grid">
-            <div 
-                v-for="product in filteredProducts" 
-                :key="`product-${product.id}`" 
-                :class="{ 'product-card': true, 'out-of-stock': product.stock === 0 }"
-            >
-                <h3>{{ product.nombre }}</h3>
-                <p>Precio: ${{ product.precio }}</p>
-                <p :class="{ 'stock-low': product.stock <= 2 && product.stock > 0, 'stock-out': product.stock === 0 }">
-                    Stock: {{ product.stock }}
-                    <span v-if="product.stock <= 2 && product.stock > 0" class="stock-warning">¡Últimas unidades!</span>
-                </p>
-                <span v-if="product.stock === 0" class="stock-badge">Sin Stock</span>
-                
-                <div class="product-actions">
-                  <!-- Botón ver detalle -->
-                  <router-link 
-                    :to="`/productos/${product.id}`" 
-                    class="btn btn-outline"
-                  >
-                    Ver Detalle
-                  </router-link>
-                  
-                  <!-- Botón agregar al carrito -->
-                  <button 
-                    @click="addToCart(product.id)"
-                    :disabled="product.stock === 0"
-                    :class="{ 
-                        'btn': true, 
-                        'btn-primary': product.stock > 0,
-                        'btn-disabled': product.stock === 0,
-                        'btn-warning': product.stock <= 2 && product.stock > 0
-                    }"
-                  >
-                    {{ getButtonText(product.stock) }}
-                  </button>
-                </div>
+  <div class="product-list">
+    <!-- Campo de búsqueda con Vuetify -->
+    <v-text-field
+      v-model="searchQuery"
+      label="Buscar productos por nombre..."
+      prepend-inner-icon="mdi-magnify"
+      variant="outlined"
+      clearable
+      class="mb-6"
+      @input="handleSearch"
+      @click:clear="clearSearch"
+    ></v-text-field>
+    <!-- Estado vacío -->
+    <!-- Estado vacío -->
+    <v-card v-if="filteredProducts.length === 0" class="text-center pa-8" variant="outlined">
+      <v-icon size="64" color="grey-lighten-1" class="mb-4">mdi-magnify</v-icon>
+      <h3 class="text-h5 mb-2">No se encontraron productos</h3>
+      <p v-if="searchQuery" class="text-body-1 mb-4">
+        No hay productos que coincidan con "{{ searchQuery }}"
+      </p>
+      <p v-else class="text-body-1 mb-4">No hay productos disponibles</p>
+      <v-btn v-if="searchQuery" @click="clearSearch" color="secondary" variant="outlined">
+        Limpiar búsqueda
+      </v-btn>
+    </v-card>
+
+    <!-- Lista de productos -->
+    <v-row v-else>
+      <v-col v-for="product in filteredProducts" :key="product.id" cols="12" sm="6" md="4">
+        <v-card
+          :class="{ 'product-out-of-stock': product.stock === 0 }"
+          elevation="2"
+          height="100%"
+        >
+          <v-card-title class="d-flex justify-space-between align-start pa-4">
+            <span class="text-h6">{{ product.nombre }}</span>
+            <v-chip v-if="product.stock === 0" color="error" size="small" variant="flat">
+              Sin Stock
+            </v-chip>
+            <v-chip v-else-if="product.stock <= 3" color="warning" size="small" variant="flat">
+              Poco Stock ({{ product.stock }})
+            </v-chip>
+          </v-card-title>
+
+          <v-card-text>
+            <p class="text-body-2 mb-3">{{ product.descripcion }}</p>
+
+            <!-- Indicador de stock visual -->
+            <v-progress-linear
+              :model-value="Math.min((product.stock / 10) * 100, 100)"
+              :color="product.stock === 0 ? 'error' : product.stock <= 3 ? 'warning' : 'success'"
+              height="6"
+              rounded
+              class="mb-3"
+            ></v-progress-linear>
+          </v-card-text>
+
+          <v-card-actions class="px-4 pb-4">
+            <v-spacer></v-spacer>
+            <div class="text-h6 text-success font-weight-bold me-3">
+              ${{ product.precio.toFixed(2) }}
             </div>
-        </div>
-        
-        <!-- Estado vacío -->
-        <div v-else class="empty-state">
-            No se encontraron productos que coincidan con "{{ searchQuery }}"
-        </div>
-    </div>
+            <v-btn
+              @click="handleAddToCart(product.id)"
+              :disabled="product.stock === 0"
+              :color="product.stock === 0 ? 'grey' : 'primary'"
+              :variant="product.stock === 0 ? 'text' : 'elevated'"
+            >
+              <v-icon left>
+                {{ product.stock === 0 ? 'mdi-close-circle' : 'mdi-cart-plus' }}
+              </v-icon>
+              {{ product.stock === 0 ? 'Sin Stock' : 'Agregar' }}
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-col>
+    </v-row>
+  </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
+import { useProductsStore } from '@/stores/products'
+import { useCartStore } from '@/stores/cart'
 
-const props = defineProps({
-    products: Array
+// Stores
+const productsStore = useProductsStore()
+const cartStore = useCartStore()
+
+// Computed properties
+const searchQuery = computed({
+  get: () => productsStore.searchQuery,
+  set: (value) => productsStore.setSearchQuery(value),
 })
 
-const emit = defineEmits(['add-to-cart'])
+const filteredProducts = computed(() => productsStore.filteredProducts)
 
-const searchQuery = ref('')
+// Eventos
+const emit = defineEmits(['product-added'])
 
-const filteredProducts = computed(() => {
-    return props.products.filter(product => 
-        product.nombre.toLowerCase().includes(searchQuery.value.toLowerCase())
-    )
-})
-
-const addToCart = (productId) => {
-    emit('add-to-cart', productId)
+// Methods
+function handleSearch(event) {
+  productsStore.setSearchQuery(event.target.value)
 }
 
-const getButtonText = (stock) => {
-    if (stock === 0) return 'Sin Stock'
-    if (stock <= 2) return 'Agregar (¡Pocas!)'
-    return 'Agregar'
+function clearSearch() {
+  productsStore.clearSearch()
+}
+
+function handleAddToCart(productId) {
+  cartStore.addToCart(productId)
+  emit('product-added', productId)
+
+  // Feedback visual opcional
+  const product = productsStore.products.find((p) => p.id === productId)
+  if (product) {
+    console.log(`Producto "${product.nombre}" agregado al carrito`)
+  }
 }
 </script>
 
-<style>
-.search-box {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 20px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+<style scoped>
+/* Solo necesitamos estilos mínimos para personalizar Vuetify */
+.product-out-of-stock {
+  opacity: 0.7;
 }
 
-.product-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 20px;
-}
-
-.product-card {
-    background: #fff;
-    padding: 15px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    position: relative;
-}
-
-.out-of-stock {
-    opacity: 0.5;
-}
-
-.stock-badge {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: red;
-    color: white;
-    padding: 5px;
-    border-radius: 3px;
-}
-
-.product-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 15px;
-}
-
-.btn {
-    display: inline-block;
-    padding: 8px 12px;
-    background: #007bff;
-    color: white;
-    text-align: center;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    text-decoration: none;
-    font-size: 14px;
-    flex: 1;
-}
-
-.btn-primary {
-    background: #007bff;
-}
-
-.btn-outline {
-    background: transparent;
-    color: #007bff;
-    border: 1px solid #007bff;
-}
-
-.btn-outline:hover {
-    background: #007bff;
-    color: white;
-}
-
-.btn-warning {
-    background: #ffc107;
-    color: #212529;
-}
-
-.btn-disabled {
-    background: #6c757d;
-    cursor: not-allowed;
-}
-
-/* Estilos para indicadores de stock */
-.stock-low {
-    color: #ff6b35;
-    font-weight: bold;
-}
-
-.stock-out {
-    color: #dc3545;
-    font-weight: bold;
-}
-
-.stock-warning {
-    font-size: 0.8em;
-    background: #fff3cd;
-    color: #856404;
-    padding: 2px 6px;
-    border-radius: 3px;
-    margin-left: 8px;
-}
-
-.empty-state {
-    text-align: center;
-    color: #999;
-    padding: 50px 0;
+.product-out-of-stock .v-card {
+  filter: grayscale(0.3);
 }
 </style>

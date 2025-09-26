@@ -1,163 +1,157 @@
 <template>
-    <div>
-        <h1>Products</h1>
-        
-        <div class="main-layout">
-            <!-- Columna izquierda - Lista de productos -->
+    <div class="products-page">
+        <div class="page-header">
+            <h1>🛍️ Nuestros Productos</h1>
+            <p>Encuentra los mejores productos de tecnología</p>
+        </div>
+
+        <div class="products-layout">
+            <!-- Lista de productos -->
             <div class="products-section">
-                <ProductList 
-                    :products="products" 
-                    @add-to-cart="handleAddToCart"
-                />
+                <ProductList @product-added="handleProductAdded" />
             </div>
-            
-            <!-- Columna derecha - Carrito -->
+
+            <!-- Carrito -->
             <div class="cart-section">
-                <Cart 
-                    :cart-items="cartItems"
-                    @increase-quantity="increaseQuantity"
-                    @decrease-quantity="decreaseQuantity"
-                />
+                <Cart />
             </div>
+        </div>
+
+        <!-- Toast/notification opcional -->
+        <div v-if="showNotification" class="notification">
+            {{ notificationMessage }}
         </div>
     </div>
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import ProductList from '@/components/ProductList.vue'
 import Cart from '@/components/Cart.vue'
-import { ref, computed } from 'vue'
+import { useProductsStore } from '@/stores/products'
 
-// Datos de productos
-const products = ref([
-    { id: 1, nombre: 'Laptop Gaming', precio: 1200, stock: 5 },
-    { id: 2, nombre: 'Mouse Inalámbrico', precio: 25, stock: 0 },
-    { id: 3, nombre: 'Teclado Mecánico', precio: 80, stock: 3 },
-    { id: 4, nombre: 'Teclado Mecánico RGB', precio: 80, stock: 3 },
-    { id: 5, nombre: 'Teclado Mecánico Gaming', precio: 80, stock: 3 },
-    { id: 6, nombre: 'Monitor 4K', precio: 300, stock: 2 },
-    { id: 7, nombre: 'Auriculares Gaming', precio: 150, stock: 0 },
-    { id: 8, nombre: 'Webcam HD', precio: 70, stock: 4 },
-    { id: 9, nombre: 'Disco Duro Externo', precio: 100, stock: 6 },
-    { id: 10, nombre: 'Router WiFi 6', precio: 200, stock: 1 }
-])
+// Stores
+const productsStore = useProductsStore()
 
-// Estado del carrito
-const cart = ref([])
+// Estado para notificaciones
+const showNotification = ref(false)
+const notificationMessage = ref('')
 
-// Computed para los items del carrito con subtotales
-const cartItems = computed(() => {
-    return cart.value.map(item => {
-        const product = products.value.find(p => p.id === item.productId)
-        return {
-        id: item.productId,
-        nombre: product.nombre,
-        precio: product.precio,
-        quantity: item.quantity,
-        subtotal: product.precio * item.quantity
-        }
-    })
-})
-
-const handleAddToCart = (productId) => {
-    const product = products.value.find(p => p.id === productId)
-    const existingItem = cart.value.find(item => item.productId === productId)
-    
-    // Verificar si hay stock disponible
-    if (product.stock <= 0) {
-        alert('No hay stock disponible para este producto')
-        return
-    }
-    
-    if (existingItem) {
-        // Verificar si se puede agregar más cantidad
-        if (product.stock > 0) {
-            existingItem.quantity += 1
-            product.stock -= 1 // Reducir stock disponible
-        } else {
-            alert('No hay más stock disponible para este producto')
-            return
-        }
-    } else {
-        // Agregar nuevo item al carrito
-        cart.value.push({
-            productId: productId,
-            quantity: 1
-        })
-        product.stock -= 1 // Reducir stock disponible
-    }
-    
-    console.log(`Producto ${product.nombre} agregado. Stock restante: ${product.stock}`)
-}
-
-const increaseQuantity = (productId) => {
-    const item = cart.value.find(item => item.productId === productId)
-    const product = products.value.find(p => p.id === productId)
-    
-    if (item && product) {
-        // Verificar si hay stock disponible
-        if (product.stock > 0) {
-            item.quantity += 1
-            product.stock -= 1 // Reducir stock disponible
-            console.log(`Cantidad aumentada. Stock restante de ${product.nombre}: ${product.stock}`)
-        } else {
-            alert(`No hay más stock disponible para ${product.nombre}`)
-        }
+// Manejo de eventos
+function handleProductAdded(productId) {
+    const product = productsStore.products.find((p) => p.id === productId)
+    if (product) {
+        showNotificationMessage(`"${product.nombre}" agregado al carrito`)
     }
 }
 
-const decreaseQuantity = (productId) => {
-    const item = cart.value.find(item => item.productId === productId)
-    const product = products.value.find(p => p.id === productId)
-    
-    if (item && product) {
-        item.quantity -= 1
-        product.stock += 1 // Restaurar stock disponible
-        
-        console.log(`Cantidad reducida. Stock restaurado de ${product.nombre}: ${product.stock}`)
-        
-        // Eliminar el item si la cantidad llega a 0
-        if (item.quantity === 0) {
-            const index = cart.value.indexOf(item)
-            cart.value.splice(index, 1)
-        }
-    }
+function showNotificationMessage(message) {
+    notificationMessage.value = message
+    showNotification.value = true
+
+    // Ocultar después de 3 segundos
+    setTimeout(() => {
+        showNotification.value = false
+    }, 3000)
 }
 </script>
 
 <style scoped>
-h1 {
-    text-align: center;
-    margin-bottom: 20px;
-    color: #2c3e50;
+.products-page {
+    position: relative;
 }
 
-.main-layout {
-    display: flex;
-    gap: 20px;
-    min-height: 70vh;
+.page-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.page-header h1 {
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+    font-size: 2.5rem;
+}
+
+.page-header p {
+    color: #6c757d;
+    font-size: 1.2rem;
+    margin: 0;
+}
+
+.products-layout {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 2rem;
+    align-items: start;
 }
 
 .products-section {
-    flex: 2;
-    min-width: 0; /* Permite que se contraiga */
+    min-width: 0; /* Para permitir que el contenido se encoja */
 }
 
 .cart-section {
-    flex: 1;
-    min-width: 350px;
-    max-width: 400px;
+    position: sticky;
+    top: 100px; /* Ajustar según la altura del header */
 }
 
-/* Responsive: En pantallas pequeñas, hacer que sea vertical */
-@media (max-width: 768px) {
-    .main-layout {
-        flex-direction: column;
+/* Notificación */
+.notification {
+    position: fixed;
+    top: 100px;
+    right: 20px;
+    background: #28a745;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
     }
-    
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .products-layout {
+        grid-template-columns: 1fr 350px;
+        gap: 1.5rem;
+    }
+}
+
+@media (max-width: 968px) {
+    .products-layout {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
     .cart-section {
-        min-width: auto;
-        max-width: none;
+        position: static;
+        order: -1; /* Mostrar el carrito arriba en móviles */
+    }
+
+    .notification {
+        right: 10px;
+        left: 10px;
+        right: 10px;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-header h1 {
+        font-size: 2rem;
+    }
+
+    .page-header p {
+        font-size: 1rem;
     }
 }
 </style>
