@@ -52,13 +52,10 @@ export const useAuthStore = defineStore('auth', () => {
 
       // Inicializar stores relacionados después del login
       setTimeout(async () => {
-        const { useCustomersStore } = await import('./customers')
         const { useCartStore } = await import('./cart')
 
-        const customersStore = useCustomersStore()
         const cartStore = useCartStore()
 
-        customersStore.initializeForUser()
         cartStore.loadCart()
       }, 0)
 
@@ -87,13 +84,10 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.removeItem('auth_token')
 
       // Limpiar stores relacionados
-      const { useCustomersStore } = await import('./customers')
       const { useCartStore } = await import('./cart')
 
-      const customersStore = useCustomersStore()
       const cartStore = useCartStore()
 
-      customersStore.clearForLogout()
       cartStore.clearCart()
 
       return { success: true }
@@ -121,13 +115,10 @@ export const useAuthStore = defineStore('auth', () => {
 
           // Inicializar stores relacionados
           setTimeout(async () => {
-            const { useCustomersStore } = await import('./customers')
             const { useCartStore } = await import('./cart')
 
-            const customersStore = useCustomersStore()
             const cartStore = useCartStore()
 
-            customersStore.initializeForUser()
             cartStore.loadCart()
           }, 0)
 

@@ -66,16 +66,51 @@ const router = createRouter({
   history: createWebHistory(),
   routes,
   scrollBehavior(to, from, savedPosition) {
+    // Si hay una posición guardada (botón atrás/adelante)
     if (savedPosition) {
-      return savedPosition
-    } else {
-      return { top: 0 }
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve(savedPosition)
+        }, 300) // Esperar a que se cargue el contenido
+      })
     }
+
+    // Si hay un hash, scroll al elemento
+    if (to.hash) {
+      return {
+        el: to.hash,
+        behavior: 'smooth',
+        top: 80, // Offset para el header fijo
+      }
+    }
+
+    // Para navegación a detalle y vuelta a lista, mantener posición
+    if (from.name === 'product-detail' && to.name === 'products') {
+      const savedScroll = sessionStorage.getItem('products_scroll')
+      if (savedScroll) {
+        const { x, y } = JSON.parse(savedScroll)
+        return { left: x, top: y, behavior: 'smooth' }
+      }
+    }
+
+    // Por defecto, scroll al top
+    return { top: 0, behavior: 'smooth' }
   },
 })
 
-// Guardia global ANTES de cada navegación
-router.beforeEach(async (to, from, next) => {
+// Guardar posición antes de navegar a detalle
+router.beforeEach((to, from, next) => {
+  // Guardar scroll de productos antes de ir a detalle
+  if (from.name === 'products' && to.name === 'product-detail') {
+    sessionStorage.setItem(
+      'products_scroll',
+      JSON.stringify({
+        x: window.scrollX,
+        y: window.scrollY,
+      }),
+    )
+  }
+
   const authStore = useAuthStore()
 
   // Intentar restaurar sesión si no está cargada

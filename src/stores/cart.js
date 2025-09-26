@@ -1,6 +1,8 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { useProductsStore } from './products'
+import { useAuthStore } from './auth'
+import { StorageService } from '../services/StorageService'
 
 export const useCartStore = defineStore('cart', () => {
   // Estado
@@ -125,6 +127,50 @@ export const useCartStore = defineStore('cart', () => {
     cartItems.value = []
   }
 
+  // Actions adicionales
+  function loadCart() {
+    try {
+      const authStore = useAuthStore()
+      if (!authStore.user) return
+
+      const cartData = StorageService.load(`cart_${authStore.user.id}`)
+      if (cartData && cartData.items) {
+        cartItems.value = cartData.items
+        console.log('Carrito cargado desde localStorage')
+      }
+    } catch (error) {
+      console.error('Error cargando carrito:', error)
+    }
+  }
+
+  function saveCart() {
+    try {
+      const authStore = useAuthStore()
+      if (!authStore.user) return
+
+      const cartData = {
+        items: cartItems.value,
+        timestamp: Date.now(),
+      }
+
+      StorageService.save(`cart_${authStore.user.id}`, cartData)
+    } catch (error) {
+      console.error('Error guardando carrito:', error)
+    }
+  }
+
+  // Watch para auto-guardar
+  watch(
+    () => cartItems.value,
+    () => {
+      const authStore = useAuthStore()
+      if (authStore.user) {
+        saveCart()
+      }
+    },
+    { deep: true },
+  )
+
   return {
     cartItems,
     cartItemsWithDetails,
@@ -136,5 +182,7 @@ export const useCartStore = defineStore('cart', () => {
     decreaseQuantity,
     removeFromCart,
     clearCart,
+    loadCart,
+    saveCart,
   }
 })
